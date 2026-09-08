@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_.-]+$');
+    }
+
+    function isNumeric(val) {
+      return val is int || val is float;
+    }
+
+    // User document validation
+    function isValidUser(data, userId) {
+      return data.id is string && data.id == userId &&
+             data.email is string && data.email.size() >= 0 && data.email.size() <= 256 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 128)) &&
+             (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 1024));
+    }
+
+    // ChecklistItem validation
+    function isValidChecklistItem(data, userId) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId == userId &&
+             data.object is string && data.object.size() > 0 && data.object.size() <= 128 &&
+             data.category in ['SAFETY', 'ENERGY', 'SECURITY', 'OTHER'] &&
+             data.room is string && data.room.size() > 0 && data.room.size() <= 128 &&
+             data.recommended_state is string && data.recommended_state.size() > 0 && data.recommended_state.size() <= 256 &&
+             (!('reason' in data) || (data.reason is string && data.reason.size() <= 512)) &&
+             (!('confidence' in data) || isNumeric(data.confidence)) &&
+             (!('importance' in data) || (data.importance in ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'])) &&
+             (!('verification_method' in data) || (data.verification_method in ['CAMERA_AI', 'SENSOR', 'OFFICE_KIT', 'MANUAL'])) &&
+             (!('enabled' in data) || (data.enabled is bool)) &&
+             (!('isManuallyChecked' in data) || (data.isManuallyChecked is bool));
+    }
+
+    // DepartureEvent validation
+    function isValidDepartureEvent(data, userId) {
+      return data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+             data.userId is string && data.userId == userId &&
+             isNumeric(data.timestamp) &&
+             isNumeric(data.distanceMeters) &&
+             isNumeric(data.unverifiedItemsCount) && data.unverifiedItemsCount >= 0 &&
+             isNumeric(data.totalItemsCount) && data.totalItemsCount >= 0 &&
+             (!('isSimulated' in data) || (data.isSimulated is bool));
+    }
+
+    // /users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && isValidId(userId) &&
+        isValidUser(incoming(), userId) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId) && isValidId(userId) &&
+        isValidUser(incoming(), userId) &&
+        incoming().id == existing().id &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasAny(['displayName', 'photoURL', 'homeLocation', 'updatedAt']);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Subcollection: /users/{userId}/items/{itemId}
+      match /items/{itemId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(itemId) &&
+          isValidChecklistItem(incoming(), userId) &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time;
+
+        allow update: if isOwner(userId) && isValidId(itemId) &&
+          isValidChecklistItem(incoming(), userId) &&
+          incoming().id == existing().id &&
+          incoming().userId == existing().userId &&
+          (!('createdAt' in existing()) || incoming().createdAt == existing().createdAt) &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasAny(['object', 'category', 'room', 'recommended_state', 'reason', 'confidence', 'importance', 'verification_method', 'enabled', 'isManuallyChecked', 'lastVerified', 'beforeState', 'afterState', 'history', 'officeKitSynced', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(itemId);
+      }
+
+      // Subcollection: /users/{userId}/departureEvents/{eventId}
+      match /departureEvents/{eventId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(eventId) &&
+          isValidDepartureEvent(incoming(), userId) &&
+          incoming().createdAt == request.time;
+
+        allow delete: if isOwner(userId) && isValidId(eventId);
+      }
+    }
+  }
+}

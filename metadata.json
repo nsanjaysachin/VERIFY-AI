@@ -1,0 +1,12 @@
+{
+  "name": "VERIFY",
+  "description": "Your AI-powered home safety and energy assistant.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

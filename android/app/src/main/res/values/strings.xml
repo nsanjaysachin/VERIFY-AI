@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">VERIFY</string>
+    <string name="action_reload">Reload</string>
+    <string name="action_switch_url">Switch Dev URL</string>
+    <string name="permission_camera_rationale">Camera access is required for home scanning and item verification.</string>
+    <string name="permission_audio_rationale">Microphone access is required for the voice assistant.</string>
+    <string name="permission_location_rationale">Location access is required for departure geofencing and home perimeter monitoring.</string>
+</resources>

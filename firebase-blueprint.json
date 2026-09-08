@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with optional home geofence coordinates",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 1024 },
+        "homeLocation": {
+          "type": "object",
+          "properties": {
+            "latitude": { "type": "number" },
+            "longitude": { "type": "number" },
+            "radiusMeters": { "type": "number" },
+            "label": { "type": "string", "maxLength": 128 },
+            "address": { "type": "string", "maxLength": 256 },
+            "updatedAt": { "type": "number" }
+          }
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "email"]
+    },
+    "ChecklistItem": {
+      "title": "ChecklistItem",
+      "description": "Safety item inspected prior to leaving home",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "object": { "type": "string", "maxLength": 128 },
+        "category": {
+          "type": "string",
+          "enum": ["SAFETY", "ENERGY", "SECURITY", "OTHER"]
+        },
+        "room": { "type": "string", "maxLength": 128 },
+        "recommended_state": { "type": "string", "maxLength": 256 },
+        "reason": { "type": "string", "maxLength": 512 },
+        "confidence": { "type": "number" },
+        "importance": {
+          "type": "string",
+          "enum": ["CRITICAL", "HIGH", "MEDIUM", "LOW"]
+        },
+        "verification_method": {
+          "type": "string",
+          "enum": ["CAMERA_AI", "SENSOR", "OFFICE_KIT", "MANUAL"]
+        },
+        "enabled": { "type": "boolean" },
+        "isManuallyChecked": { "type": "boolean" },
+        "lastVerified": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "object", "category", "room", "recommended_state"]
+    },
+    "DepartureEvent": {
+      "title": "DepartureEvent",
+      "description": "Record for geofence departure events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "number" },
+        "distanceMeters": { "type": "number" },
+        "unverifiedItemsCount": { "type": "number" },
+        "totalItemsCount": { "type": "number" },
+        "isSimulated": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "timestamp", "distanceMeters", "unverifiedItemsCount", "totalItemsCount"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile with geofence settings"
+    },
+    "/users/{userId}/items/{itemId}": {
+      "schema": "ChecklistItem",
+      "description": "Safety items configured for user's home"
+    },
+    "/users/{userId}/departureEvents/{eventId}": {
+      "schema": "DepartureEvent",
+      "description": "Departure event inspection records"
+    }
+  }
+}
